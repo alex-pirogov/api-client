@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 from pydantic import BaseModel
 
 from .request import ApiMethod, ApiRequest
-from .tg_alerting_api import TelegramAlertingApi
+from .tg_alerting_api import TelegramAlertingApiClient
 
 load_dotenv('.env')
 
@@ -35,7 +35,7 @@ class Product(BaseModel):
     images: List[str]
 
 
-class TestApi(TelegramAlertingApi):
+class TestApi(TelegramAlertingApiClient):
     name = "Test Api"
     base_url = 'https://dummyjson.com'
     logger = logger

@@ -9,7 +9,7 @@ from .base_client import BaseApiClient
 from .request import BaseApiRequest
 
 
-class TelegramAlertingApi(BaseApiClient):
+class TelegramAlertingApiClient(BaseApiClient):
     def __init__(
             self,
             token: str,
