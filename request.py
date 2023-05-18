@@ -3,8 +3,8 @@ import json
 import logging
 from abc import ABC
 from enum import Enum
-from typing import (TYPE_CHECKING, Any, Callable, Generator, Generic, Optional,
-                    Type, TypeAlias, TypeVar, Union)
+from typing import (TYPE_CHECKING, Any, Callable, Generator, Generic, List,
+                    Optional, Type, TypeAlias, TypeVar, Union)
 from urllib.parse import urlencode
 
 from aiohttp import ClientResponse
@@ -35,6 +35,7 @@ class BaseApiRequest(ABC, Generic[_ReturnType]):
             url: str,
             ReturnType: Type[_ReturnType],
             payload: Optional[JSON] = None,
+            allowed_error_codes: Optional[List[int]] = None,
             **query_args: str
     ) -> None:
         self.api = api
@@ -42,6 +43,7 @@ class BaseApiRequest(ABC, Generic[_ReturnType]):
         self.url = self._build_url(url)
         self.payload = payload
         self.ReturnType = ReturnType
+        self.allowed_error_codes = allowed_error_codes
         self.query_args = query_args
 
     def _build_url(self, method: str, **query_args: Any) -> str:
@@ -65,10 +67,15 @@ class BaseApiRequest(ABC, Generic[_ReturnType]):
 class AsyncApiRequest(BaseApiRequest[_ReturnType]):
     async def __check_response(self, response: ClientResponse):
         status, text = response.status, await response.text()
-        if status >= 400:
+        
+        if status < 400:
+            return
+        
+        if self.allowed_error_codes and status not in self.allowed_error_codes:
             self._log_request(status, text, logging.ERROR)
             asyncio.ensure_future(self.api.call_async_error_hook(self, status, text))
-            self.api.raise_exception(self, status, text)
+
+        self.api.raise_exception(self, status, text)
 
     async def __return_resp(self, response: ClientResponse) -> _ReturnType:
         return self.ReturnType.parse_obj(await response.json())
@@ -89,10 +96,15 @@ class AsyncApiRequest(BaseApiRequest[_ReturnType]):
 class SyncApiRequest(BaseApiRequest[_ReturnType]):
     def __check_response(self, response: Response):
         status, text = response.status_code, response.text
-        if status >= 400:
+        
+        if status < 400:
+            return
+        
+        if self.allowed_error_codes and status not in self.allowed_error_codes:
             self._log_request(status, text, logging.ERROR)
             self.api.call_error_hook(self, status, text)
-            self.api.raise_exception(self, status, text)
+            
+        self.api.raise_exception(self, status, text)
 
     def __return_resp(self, response: Response) -> _ReturnType:
         return self.ReturnType.parse_obj(response.json())
