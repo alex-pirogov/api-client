@@ -16,7 +16,8 @@ if TYPE_CHECKING:
 
 
 JSON: TypeAlias = Union[dict[str, 'JSON'], list['JSON'], str, int, float, bool, None]
-_ReturnType = TypeVar('_ReturnType', bound=BaseModel)
+# TODO: fix type annotations
+_ReturnType = TypeVar('_ReturnType', bound=Union[BaseModel, None])
 
 
 class ApiMethod(str, Enum):
@@ -26,14 +27,14 @@ class ApiMethod(str, Enum):
     PATCH = 'patch'
     DELETE = 'delete'
 
-    
+
 class BaseApiRequest(ABC, Generic[_ReturnType]):
     def __init__(
             self,
             api: 'BaseApiClient',
             method: ApiMethod,
             url: str,
-            ReturnType: Type[_ReturnType],
+            ReturnType: Type[_ReturnType] = type(None),
             payload: Optional[JSON] = None,
             allowed_error_codes: Optional[List[int]] = None,
             **query_args: str
@@ -78,6 +79,9 @@ class AsyncApiRequest(BaseApiRequest[_ReturnType]):
         self.api.raise_exception(self, status, text)
 
     async def __return_resp(self, response: ClientResponse) -> _ReturnType:
+        if self.ReturnType is type(None):
+            return
+        
         return self.ReturnType.parse_obj(await response.json())
 
     async def _async_make_request(self) -> _ReturnType:
@@ -107,6 +111,9 @@ class SyncApiRequest(BaseApiRequest[_ReturnType]):
         self.api.raise_exception(self, status, text)
 
     def __return_resp(self, response: Response) -> _ReturnType:
+        if self.ReturnType is type(None):
+            return
+            
         return self.ReturnType.parse_obj(response.json())
     
     def _make_request(self):
