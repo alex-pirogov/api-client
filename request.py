@@ -8,7 +8,7 @@ from typing import (TYPE_CHECKING, Any, Callable, Generator, Generic, List,
 from urllib.parse import urlencode
 
 from aiohttp import ClientResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, parse_obj_as
 from requests import Response
 
 if TYPE_CHECKING:
@@ -37,6 +37,7 @@ class BaseApiRequest(ABC, Generic[_ReturnType]):
             ReturnType: Type[_ReturnType] = type(None),
             payload: Optional[JSON] = None,
             allowed_error_codes: Optional[List[int]] = None,
+            return_list: bool = False,
             **query_args: str
     ) -> None:
         self.api = api
@@ -45,6 +46,7 @@ class BaseApiRequest(ABC, Generic[_ReturnType]):
         self.payload = payload
         self.ReturnType = ReturnType
         self.allowed_error_codes = allowed_error_codes
+        self.return_list = return_list
         self.query_args = query_args
 
     def _build_url(self, method: str, **query_args: Any) -> str:
@@ -82,6 +84,9 @@ class AsyncApiRequest(BaseApiRequest[_ReturnType]):
         if self.ReturnType is type(None):
             return
         
+        if self.return_list:
+            return parse_obj_as(List[self.ReturnType], await response.json())
+        
         return self.ReturnType.parse_obj(await response.json())
 
     async def _async_make_request(self) -> _ReturnType:
@@ -113,7 +118,10 @@ class SyncApiRequest(BaseApiRequest[_ReturnType]):
     def __return_resp(self, response: Response) -> _ReturnType:
         if self.ReturnType is type(None):
             return
-            
+
+        if self.return_list:
+            return parse_obj_as(List[self.ReturnType], response.json())
+        
         return self.ReturnType.parse_obj(response.json())
     
     def _make_request(self):
