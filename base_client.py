@@ -25,6 +25,7 @@ class BaseApiClient(ABC):
     logger: Optional[logging.Logger] = None
     debug: bool = False
     ExceptionClass: Type[BaseApiClientError] = BaseApiClientError
+    verify_ssl: bool = True
 
     def __init__(self) -> None:
         assert self.base_url

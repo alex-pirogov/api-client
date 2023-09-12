@@ -87,7 +87,11 @@ class AsyncApiRequest(BaseApiRequest[_ReturnType]):
     async def _async_make_request(self) -> _ReturnType:
         async with self.api.asession as session:
             request_method: Callable[..., ClientResponse] = getattr(session, self.method)
-            async with request_method(self.url, json=self.payload) as response:
+            async with request_method(
+                    self.url,
+                    json=self.payload,
+                    ssl=self.api.verify_ssl
+            ) as response:
                 self._log_request(response.status, await response.text())
                 await self.__check_response(response)
 
