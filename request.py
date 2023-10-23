@@ -122,7 +122,7 @@ class SyncApiRequest(BaseApiRequest[_ReturnType]):
     
     def _make_request(self):
         request_method = getattr(self.api.session, self.method)
-        response: Response = request_method(self.url, json=self.payload)
+        response: Response = request_method(self.url, json=self.payload, verify=self.api.verify_ssl)
         
         self._log_request(response.status_code, response.text)
         self.__check_response(response)
