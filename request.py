@@ -8,7 +8,7 @@ from typing import (TYPE_CHECKING, Any, Callable, Generator, Generic, List,
 from urllib.parse import urlencode
 
 from aiohttp import ClientResponse
-from pydantic import parse_obj_as
+from pydantic import TypeAdapter
 from requests import Response
 
 if TYPE_CHECKING:
@@ -82,7 +82,8 @@ class AsyncApiRequest(BaseApiRequest[_ReturnType]):
         if self.ReturnType is type(None):
             return
         
-        return parse_obj_as(self.ReturnType, await response.json())
+        ta = TypeAdapter(self.ReturnType)
+        return ta.validate_python(await response.json())
 
     async def _async_make_request(self) -> _ReturnType:
         async with self.api.asession as session:
@@ -118,7 +119,8 @@ class SyncApiRequest(BaseApiRequest[_ReturnType]):
         if self.ReturnType is type(None):
             return 
 
-        return parse_obj_as(self.ReturnType, response.json())
+        ta = TypeAdapter(self.ReturnType)
+        return ta.validate_python(response.json())
     
     def _make_request(self):
         request_method = getattr(self.api.session, self.method)
